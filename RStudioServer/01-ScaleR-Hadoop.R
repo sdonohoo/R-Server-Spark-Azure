@@ -1,4 +1,9 @@
-
+############################################################################################
+# Logistic regression on 2012 airline delay dataset showing ScaleR operation in both local #
+# and Spark compute contexts.                                                              #
+#                                                                                          #
+# Medium airline data set has 6096762 rows and 32 columns.                                 #
+############################################################################################
 
 #####################################
 # Get sample airline departure data #
@@ -54,10 +59,9 @@ airOnTimeDataLocal <- RxTextData(localDir,
 #
 # Define the formula to use for the logistic regression (rxLogit)
 # The model will predict whether a flight will be delayed by at least 15 minutes based
-# on Origin airport, day of the week, departure
-# time, and destination airport.
+# on Origin airport and day of the week.
 #
-formula = "ARR_DEL15 ~ ORIGIN + DAY_OF_WEEK + DEP_TIME + DEST"
+formula = "ARR_DEL15 ~ ORIGIN + DAY_OF_WEEK"
 
 #
 # Set the compute context to local.
@@ -68,7 +72,7 @@ rxSetComputeContext("local")
 # Run a logistic regression on the local airline .csv data in a local compute
 # context (edge node only).
 # 
-# Operation performs 7 iterations and takes ~7:30 to complete on a D4v2 edge node.
+# Operation takes ~5:50 to complete on a D4v2 edge node.
 # 
 system.time(
   modelLocal <- rxLogit(formula, data = airOnTimeDataLocal)
@@ -119,21 +123,15 @@ airOnTimeData <- RxTextData(inputDir,
                             fileSystem = hdfsFS)
 
 #
-# Define the Spark compute context.
+# Start the Spark session.
 #
-mySparkCluster <- RxSpark()
-
-
-#
-# Set the compute context.
-#
-rxSetComputeContext(mySparkCluster)
+cc <- rxSparkConnect(reset=TRUE)
 
 #
 # Run the logistic regression on the  airline .csv data in HDFS in a Spark compute
 # context.
 # 
-# Operation takes ~2:00 to complete on 4 worker nodes.
+# Operation takes ~1:08 to complete on 3 worker nodes.
 # 
 system.time(
   modelSpark <- rxLogit(formula, data = airOnTimeData)
@@ -143,3 +141,9 @@ system.time(
 # Display a summary.
 #
 summary(modelSpark)
+
+#
+# Close the connection to Spark
+#
+rxSparkDisconnect(cc)
+

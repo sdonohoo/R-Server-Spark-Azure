@@ -1,35 +1,71 @@
-ts1.sim <- arima.sim(list(order = c(1,0,0), ar = 0.7), n = 200)
-ts2.sim <- arima.sim(list(order = c(1,0,0), ar = 0.7), n = 200)
-ts.plot(ts1.sim)
-ts.plot(ts2.sim)
-model <- arima(ts.sim, order = c(1, 0, 0))
-summary(model)
+############################################################################
+# Run open source R functions in a distributed context on partitioned data #
+############################################################################
 
+##
+## Compute average departure delay by day of the week
+##
 
-timeSeriesModel <- function(i)
-{
-  setMKLthreads(1)
-  txt <- RxTextData(paste0("timeseriesfolder/sku", i, ".csv"), delimiter = ",", fileSystem = fileSystemToUse)
-  x <- rxDataStep(txt)$x
-  model <- arima(x, order = c(1, 0, 0))
-  return(model)
+#
+# Start Spark session
+#
+cc <- rxSparkConnect(reset = TRUE)
+
+#
+# Define function to compute average delay by grouping key in a single data set
+#
+AverageDelay <- function(keys, data) {
+  df <- rxImport(data)
+  mean(df$ArrDelay, na.rm = TRUE)
 }
 
-cc <- rxSparkConnect(reset = TRUE) 
+#
+# Define column info for the airline departure data set
+#
+colInfo <-
+  list(
+    ArrDelay = list(type = "numeric"),
+    CRSDepTime = list(type = "numeric"),
+    DayOfWeek = list(type = "string")
+  )
 
-fileSystemToUse <- RxHdfsFileSystem()
-results <- rxExec(timeSeriesModel, elemArgs = 1:1000, execObjects = c("fileSystemToUse"))
+#
+# Create a text data source with the airline data
+#
+textData <-
+  RxTextData(
+    file = "/example/data/MRSSampleData/AirlineDemoSmall.csv",
+    firstRowIsColNames = TRUE,
+    colInfo = colInfo,
+    fileSystem = RxHdfsFileSystem()
+  )
 
-rxSparkDisconnect(cc)
+#
+# Group textData by day of week and get average delay on each day
+#
+meanDelaysList <- rxExecBy(inData = textData, keys = c("DayOfWeek"), func = AverageDelay)
+
+#
+# transform objs to a data frame
+#
+do.call(rbind, lapply(meanDelaysList, unlist))
 
 
-cc <- rxSparkConnect(reset = TRUE) 
+##
+## Build linear models for each day of the week to predict arrival delay based on departure time
+##
 
+#
+# Define function to run linear regression on data partition 
+#
 delayFunc <- function(keys, data) { 
   df <- rxImport(inData = data) 
   rxLinMod(ArrDelay ~ CRSDepTime, data = df) 
 } 
 
+#
+# Create a text data source with the airline data
+#
 airlineData <- 
   RxTextData( 
     "/example/data/MRSSampleData/AirlineDemoSmall.csv", 
@@ -41,50 +77,18 @@ airlineData <-
     fileSystem = RxHdfsFileSystem() 
   ) 
 
-returnObjs <- rxExecBy(inData=airlineData, keys=c("DayOfWeek"), func=delayFunc)  
+#
+# Group airlineData by day of week and get average delay on each day
+#
+modelList <- rxExecBy(inData=airlineData, keys=c("DayOfWeek"), func=delayFunc)  
 
-returnObjs[[1]]$key
-returnObjs[[1]]$result
+#
+# Print summary of first model
+#
+modelList[[1]]$key
+modelList[[1]]$result
 
-# transform objs to a data frame
-do.call(rbind, lapply(returnObjs, unlist))
-
+#
+# Close the connection to Spark
+#
 rxSparkDisconnect(cc)
-
-##############################################################################
-# run analytics with RxSpark compute context
-##############################################################################
-# start Spark app
-sparkCC <- rxSparkConnect()
-
-# define function to compute average delay
-".AverageDelay" <- function(keys, data) {
-  df <- rxDataStep(data)
-  mean(df$ArrDelay, na.rm = TRUE)
-}
-
-# define colInfo
-colInfo <-
-  list(
-    ArrDelay = list(type = "numeric"),
-    CRSDepTime = list(type = "numeric"),
-    DayOfWeek = list(type = "string")
-  )
-
-# create text data source with airline data
-textData <-
-  RxTextData(
-    file = "/example/data/MRSSampleData/AirlineDemoSmall.csv",
-    firstRowIsColNames = TRUE,
-    colInfo = colInfo,
-    fileSystem = RxHdfsFileSystem()
-  )
-
-# group textData by day of week and get average delay on each day
-objs <- rxExecBy(textData, keys = c("DayOfWeek"), func = .AverageDelay)
-
-# transform objs to a data frame
-do.call(rbind, lapply(objs, unlist))
-
-# stop Spark app
-rxSparkDisconnect(sparkCC)

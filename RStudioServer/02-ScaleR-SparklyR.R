@@ -1,5 +1,11 @@
-# Install sparklyr
-# install.packages("sparklyr")
+####################################################################################
+# Using R Server ScaleR and SparklyR interoperablity for data loading and analysis #
+#                                                                                  #
+# Data sets used are mtcars and sample small airline arrival delay data set from   #
+# RevoScaleR package SampleData                                                    #
+# Small airline sample data set has 600000 rows and 3 columns.                     #
+# "ArrDelay", "CRSDepTime", "DayOfWeek"                                            #
+####################################################################################
 
 
 # Load required libraries
@@ -7,6 +13,10 @@ library(RevoScaleR)
 library(sparklyr)
 library(dplyr)
 
+
+##
+## Use SparklyR to load and partition data and ScaleR for analytics
+##
 
 # Connect to Spark using rxSparkConnect, specifying 'interop = "sparklyr"'
 # this will create a sparklyr connection to spark, and allow you to use
@@ -37,12 +47,12 @@ sdf_register(partitions$training, "cars_training")
 sdf_register(partitions$test, "cars_test")
 
 
-
 # Create a RxHiveData Object for each
 cars_training_hive <- RxHiveData(table = "cars_training", 
                                  colInfo = list(cyl = list(type = "factor")))
 cars_test_hive <- RxHiveData(table = "cars_test", 
                              colInfo = list(cyl = list(type = "factor")))
+
 
 # Use the Training set to train a model with rxLinMod()
 lmModel <- rxLinMod(mpg ~ wt + cyl, cars_training_hive)
@@ -77,12 +87,9 @@ sqrt(mean((pred_res_df$mpg - pred_res_df$mpg_Pred)^2, na.rm = TRUE))
 rxSparkDisconnect(cc)
 
 
-# # # # # 
-# It is assumed at this point that you have installed sparklyr
-# Proceed to load the required libraries
-library(RevoScaleR)
-library(sparklyr)
-library(dplyr)
+##
+## Use ScaleR to load the data and SparklyR for partitioning and analytics
+##
 
 
 # Connect to Spark using rxSparkConnect
@@ -100,28 +107,25 @@ hdfsFS <- RxHdfsFileSystem()
 
 # # # #
 # There are many data sources which we can use in MRS, in the this section
-# we will go through 4 different file based data sources and how to import 
+# we have the option of 4 different file based data sources and how to import 
 # data for use in Spark. If you wish to use any of these data sources, simply
-# comment out line number 40
+# comment out the desired data source line.
 #
 # One data source is XDF files stored in HDFS. Here we create an Data Object from
 # a composite XDF from HDFS, this can then be held in memory as a DataFrame, or 
 # loaded into a Hive Table.
-AirlineDemoSmall <- RxXdfData(file="/example/data/MRSSampleData/AirlineDemoSmallComposite", fileSystem = hdfsFS)
+#AirlineDemoSmall <- RxXdfData(file="/example/data/MRSSampleData/AirlineDemoSmallComposite", fileSystem = hdfsFS)
+
 # Another option is CSV files stored in HDFS. To create a CSV Data Object from HDFS 
 # we would use RxTextData(). This can also be used for othere plain text type formats
-AirlineDemoSmall <- RxTextData("/example/data/MRSSampleData/AirlineDemoSmall.csv", fileSystem = hdfsFS)
+#AirlineDemoSmall <- RxTextData("/example/data/MRSSampleData/AirlineDemoSmall.csv", fileSystem = hdfsFS)
+
 # A third option is Parquet data using RxParquetData()
-AirlineDemoSmall <- RxParquetData("/example/data/MRSSampleData/AirlineDemoSmallParquet", fileSystem = hdfsFS)
-# Lastly, ORC  Data using RxOrcData()
-AirlineDemoSmall <- RxOrcData("/example/data/MRSSampleData/AirlineDemoSmallOrc", fileSystem = hdfsFS)
+#AirlineDemoSmall <- RxParquetData("/example/data/MRSSampleData/AirlineDemoSmallParquet", fileSystem = hdfsFS)
+
+#Lastly, ORC  Data using RxOrcData()
+#AirlineDemoSmall <- RxOrcData("/example/data/MRSSampleData/AirlineDemoSmallOrc", fileSystem = hdfsFS)
 # # # #
-
-
-# Continuing with our example, first, prepare your data for loading, for this, 
-# I'll proceed with XDF data, but any of the previously specified data sources 
-# are valid.
-AirlineDemoSmall <- RxXdfData(file="/example/data/MRSSampleData/AirlineDemoSmallComposite", fileSystem = hdfsFS)
 
 
 # Regardless of which data source used, to work with it using dplyr, we need to 

@@ -1,0 +1,20 @@
+{
+    "collab_server" : "",
+    "contents" : "############################################################################\n# Run open source R functions in a distributed context on partitioned data #\n############################################################################\n\n##\n## Compute average departure delay by day of the week\n##\n\n#\n# Start Spark session\n#\ncc <- rxSparkConnect(reset = TRUE)\n\n#\n# Define function to compute average delay by grouping key in a single data set\n#\nAverageDelay <- function(keys, data) {\n  df <- rxImport(data)\n  mean(df$ArrDelay, na.rm = TRUE)\n}\n\n#\n# Define column info for the airline departure data set\n#\ncolInfo <-\n  list(\n    ArrDelay = list(type = \"numeric\"),\n    CRSDepTime = list(type = \"numeric\"),\n    DayOfWeek = list(type = \"string\")\n  )\n\n#\n# Create a text data source with the airline data\n#\ntextData <-\n  RxTextData(\n    file = \"/example/data/MRSSampleData/AirlineDemoSmall.csv\",\n    firstRowIsColNames = TRUE,\n    colInfo = colInfo,\n    fileSystem = RxHdfsFileSystem()\n  )\n\n#\n# Group textData by day of week and get average delay on each day\n#\nmeanDelaysList <- rxExecBy(inData = textData, keys = c(\"DayOfWeek\"), func = AverageDelay)\n\n#\n# transform objs to a data frame\n#\ndo.call(rbind, lapply(meanDelaysList, unlist))\n\n\n##\n## Build linear models for each day of the week to predict arrival delay based on departure time\n##\n\n#\n# Define function to run linear regression on data partition \n#\ndelayFunc <- function(keys, data) { \n  df <- rxImport(inData = data) \n  rxLinMod(ArrDelay ~ CRSDepTime, data = df) \n} \n\n#\n# Create a text data source with the airline data\n#\nairlineData <- \n  RxTextData( \n    \"/example/data/MRSSampleData/AirlineDemoSmall.csv\", \n    firstRowIsColNames = TRUE,\n    colInfo = list( \n      ArrDelay = list(type = \"numeric\"), \n      DayOfWeek = list(type = \"factor\") \n    ), \n    fileSystem = RxHdfsFileSystem() \n  ) \n\n#\n# Group airlineData by day of week and get average delay on each day\n#\nmodelList <- rxExecBy(inData=airlineData, keys=c(\"DayOfWeek\"), func=delayFunc)  \n\n#\n# Print summary of first model\n#\nmodelList[[1]]$key\nmodelList[[1]]$result\n\n#\n# Close the connection to Spark\n#\nrxSparkDisconnect(cc)",
+    "created" : 1503504977583.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3032805608",
+    "id" : "93849CCF",
+    "lastKnownWriteTime" : 1503513499,
+    "last_content_update" : 1503513499665,
+    "path" : "~/RStudioServer/03-rxExec.R",
+    "project_path" : "03-rxExec.R",
+    "properties" : {
+    },
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
