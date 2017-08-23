@@ -22,8 +22,9 @@ you will be presented with the RStudio Server login page. Login with your sshuse
 
 From the R console session, run the following commands to install the correct version of SparklyR for this cluster.
 
+```R
 > options(repos = "https://mran.microsoft.com/snapshot/2017-05-01")
 > install.packages("sparklyr")
+```
 
 In RStudio Server UI, select "Open Project" from the File menu and open the RStudioServer.Rproj file in the /tmp/RStudioServer directory.
-
