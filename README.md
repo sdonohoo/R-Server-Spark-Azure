@@ -27,4 +27,4 @@ From the R console session, run the following commands to install the correct ve
 > install.packages("sparklyr")
 ```
 
-In RStudio Server UI, select "Open Project" from the File menu and open the RStudioServer.Rproj file in the /tmp/RStudioServer directory.
+In RStudio Server UI, select "Open Project" from the File menu and open the RStudioServer.Rproj file in the ~/RStudioServer directory.
