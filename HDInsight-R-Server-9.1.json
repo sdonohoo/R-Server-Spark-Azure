@@ -87,16 +87,16 @@
                         }
                     }
                 },
-                "storageProfile": {
-                    "storageaccounts": [
-                        {
-                            "name": "rzlcfzzpuquh6windsvm.blob.core.windows.net",
-                            "isDefault": true,
-                            "container": "sdhdir-2017-08-23t03-26-09-976z",
-                            "key": "[listKeys('/subscriptions/507e5c83-6b27-4c21-88b6-e05f6d10fe3f/resourceGroups/hospstay/providers/Microsoft.Storage/storageAccounts/rzlcfzzpuquh6windsvm', '2015-05-01-preview').key1]"
-                        }
-                    ]
-                },
+                        "storageProfile": {
+          "storageaccounts": [
+            {
+              "name": "[concat(variables('storageAccountName'),'.blob.core.windows.net')]",
+              "isDefault": true,
+              "container": "[variables('containerName')]",
+              "key": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), variables('defaultApiVersion')).key1]"
+            }
+          ]
+        },
                 "computeProfile": {
                     "roles": [
                         {
